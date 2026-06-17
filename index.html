@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RIZX TRADING HUB | Professional Journal</title>
+    <!-- Chart.js dari CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts (Poppins & Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <!-- Tesseract.js untuk Fitur OCR Baca Gambar -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Hubungkan ke file CSS Terpisah -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="dashboard-container">
+    <!-- HEADER -->
+    <header>
+        <div>
+            <h1>RIZX TRADING HUB</h1>
+            <p>Advanced Analytics & Market Strategy Journal</p>
+        </div>
+        <div class="version-badge">WEB ENGINE V1.3 + AUTO SCAN</div>
+    </header>
+
+    <!-- METRICS -->
+    <div class="stats-wrapper">
+        <div class="stat-card">
+            <h3>Win Rate</h3>
+            <div id="mxWinRate" class="value" style="color: var(--cyan-glow);">0%</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Trades</h3>
+            <div id="mxTotal" class="value">0</div>
+        </div>
+        <div class="stat-card active-pips">
+            <h3>Net Pips Performance</h3>
+            <div id="mxPips" class="value">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Profit / Loss Ratio</h3>
+            <div id="mxRatio" class="value" style="font-size: 18px; margin-top: 10px; color: var(--text-muted);">0 W - 0 L</div>
+        </div>
+    </div>
+
+    <!-- MAIN BODY CORE -->
+    <div class="grid-layout">
+        <!-- ACTION SIDEBAR -->
+        <div class="card-panel">
+            <h2><span>⚡</span> Journal Entry</h2>
+            
+            <!-- FITUR AUTO INPUT SCAN GAMBAR (OCR) -->
+            <div class="input-group" style="background: rgba(0, 240, 255, 0.03); border: 1px dashed var(--cyan-glow); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                <label style="color: var(--cyan-glow); font-weight: bold;">Auto Input via Screenshot</label>
+                <input type="file" id="txOcrImage" accept="image/*" style="display: none;">
+                <button type="button" class="btn-submit" id="btnUploadTrigger" style="background: linear-gradient(135deg, rgba(0,240,255,0.2), rgba(0,162,255,0.2)); color: var(--cyan-glow); border: 1px solid var(--cyan-glow); margin-top: 5px; padding: 10px;">
+                    📸 Scan Screenshot Posisi
+                </button>
+                <small id="ocrStatus" style="color: var(--text-muted); font-size: 11px; margin-top: 6px; display: block; text-align: center; font-style: italic;"></small>
+            </div>
+
+            <div class="input-group">
+                <label>Execution Date</label>
+                <input type="date" id="txDate">
+            </div>
+
+            <div class="input-group">
+                <label>Asset Pair</label>
+                <select id="txPair">
+                    <option value="XAUUSD">XAUUSD (Gold)</option>
+                    <option value="US100">US100 (Nasdaq)</option>
+                    <option value="EURUSD">EURUSD</option>
+                    <option value="GBPUSD">GBPUSD</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>Order Direction</label>
+                <select id="txType">
+                    <option value="BUY">BUY / LONG</option>
+                    <option value="SELL">SELL / SHORT</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>Volume (Lots)</label>
+                <input type="number" id="txLot" step="0.01" placeholder="0.10">
+            </div>
+
+            <div class="input-group">
+                <label>Trade Outcome</label>
+                <select id="txStatus">
+                    <option value="TP">Hit Take Profit (TP)</option>
+                    <option value="SL">Hit Stop Loss (SL)</option>
+                </select>
+            </div>
+
+            <button type="button" class="btn-submit" id="btnCommit">Commit Trade</button>
+        </div>
+
+        <!-- ANALYTICS VISUALIZER -->
+        <div class="card-panel chart-frame">
+            <h2><span>📈</span> Equity Pips Curve</h2>
+            <div class="chart-wrapper">
+                <canvas id="ctxChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATABASE ARCHIVE TABLE -->
+    <div class="table-panel">
+        <div class="table-header">
+            <h2>History Database Logs</h2>
+            <button class="btn-reset" id="btnClearDatabase">Purge Database</button>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Asset Pair</th>
+                        <th>Action</th>
+                        <th>Volume</th>
+                        <th>Net Pips</th>
+                        <th>Outcome</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="dbLogRoot"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Hubungkan ke file JavaScript Terpisah -->
+<script src="script.js"></script>
+</body>
+</html>
