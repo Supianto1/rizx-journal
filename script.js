@@ -4,8 +4,17 @@ let currentCalendarDate = new Date();
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('txDate').valueAsDate = new Date();
     
-    // Sinkronisasi Modal Awal jika diubah manual
-    document.getElementById('txCapital').addEventListener('input', () => {
+    // AMBIL MODAL AWAL DARI STORAGE SAAT PERTAMA KALI WEB DIBUKA
+    const savedCapital = localStorage.getItem('rizx_hub_capital');
+    if (savedCapital !== null) {
+        document.getElementById('txCapital').value = savedCapital;
+    } else {
+        document.getElementById('txCapital').value = 10000; // Default jika baru pertama pakai
+    }
+
+    // SIMPAN MODAL SECARA OTOMATIS SAAT USER MENGETIK PERUBAHAN
+    document.getElementById('txCapital').addEventListener('input', (e) => {
+        localStorage.setItem('rizx_hub_capital', e.target.value);
         refreshHub();
     });
 
@@ -26,13 +35,10 @@ function calculatePips(pair, type, entry, exit) {
     if (isNaN(entryPrice) || isNaN(exitPrice)) return 0;
 
     if (pair === "XAUUSD") {
-        // Gold: 1 Point pergerakan penuh (misal 2300.00 ke 2301.00 = 10 pips / 1 point)
         pips = (exitPrice - entryPrice) * 10;
     } else if (pair === "US100") {
-        // Indices / Nasdaq: Perhitungan point mutlak
         pips = (exitPrice - entryPrice);
     } else {
-        // Forex standar (EURUSD/GBPUSD): Pip berada di desimal ke-4 (0.0001)
         pips = (exitPrice - entryPrice) * 10000;
     }
 
@@ -53,7 +59,6 @@ btnCommit.addEventListener('click', () => {
         return;
     }
 
-    // Auto Hitung Pips murni dari pergerakan harga masuk/keluar
     const netPips = calculatePips(pair, type, entry, exit);
 
     const record = {
@@ -68,7 +73,6 @@ btnCommit.addEventListener('click', () => {
 
     refreshHub();
 
-    // Reset Form Input
     document.getElementById('txLot').value = '';
     document.getElementById('txPriceEntry').value = '';
     document.getElementById('txPriceExit').value = '';
@@ -77,6 +81,8 @@ btnCommit.addEventListener('click', () => {
 btnClearDatabase.addEventListener('click', () => {
     if (confirm('Kosongkan seluruh database jurnal trading secara permanen?')) {
         localStorage.removeItem('rizx_hub_data');
+        localStorage.removeItem('rizx_hub_capital'); // Ikut bersihkan data modal
+        document.getElementById('txCapital').value = 10000;
         refreshHub();
     }
 });
@@ -100,7 +106,7 @@ function refreshHub() {
 }
 
 function runMetrics(data) {
-    const initialCapital = parseFloat(document.getElementById('txCapital').value) || 10000;
+    const initialCapital = parseFloat(document.getElementById('txCapital').value) || 0;
     const total = data.length;
     
     if (total === 0) {
@@ -118,14 +124,13 @@ function runMetrics(data) {
     const winRate = ((wins / total) * 100).toFixed(1);
     const netPips = data.reduce((acc, current) => acc + parseFloat(current.pips), 0);
 
-    // Simulasi Saldo Akun (Asumsi simpel: 1 Pip senilai $1 per Lot standar, bisa disesuaikan rumus leverage)
+    // Perhitungan PnL uang berdasarkan Pip & Lot ($10 per lot per pip standar)
     const totalPnLMoney = data.reduce((acc, current) => acc + (parseFloat(current.pips) * parseFloat(current.lot) * 10), 0);
     const currentBalance = initialCapital + totalPnLMoney;
 
     document.getElementById('mxWinRate').innerText = `${winRate}%`;
     document.getElementById('mxTotal').innerText = total;
     
-    // Panel Finansial (Kiri Atas)
     const pipsPanel = document.getElementById('mxNetPips');
     pipsPanel.innerText = (netPips >= 0 ? '+' : '') + netPips.toFixed(1);
     pipsPanel.style.color = netPips >= 0 ? 'var(--green-tp)' : 'var(--red-sl)';
@@ -154,7 +159,7 @@ function renderTable(data) {
             <td><strong>${row.pair}</strong></td>
             <td><span class="badge-type ${typeStyle}">${row.type}</span></td>
             <td>${row.lot}</td>
-            <td style="color: var(--text-muted); font-size:12px;">${row.entry} $\rightarrow$ ${row.exit}</td>
+            <td style="color: var(--text-muted); font-size:12px;">${row.entry} &rarr; ${row.exit}</td>
             <td style="font-weight: 600; color: ${row.pips >= 0 ? 'var(--green-tp)' : 'var(--red-sl)'}">${pipsDisplay}</td>
             <td><span class="status-pill ${statusStyle}">${row.status}</span></td>
             <td><button class="btn-action-del" onclick="purgeRecord(${row.uid})">🗑️</button></td>
@@ -170,7 +175,6 @@ window.purgeRecord = function(uid) {
     refreshHub();
 }
 
-// CALENDAR SYSTEM IMPLEMENTATION
 function renderCalendar(data) {
     const calendarGrid = document.getElementById('calendarGrid');
     const monthYearLabel = document.getElementById('calendarMonthYear');
@@ -183,25 +187,20 @@ function renderCalendar(data) {
     const firstDayIndex = new Date(year, month, 1).getDay();
     const totalDays = new Date(year, month + 1, 0).getDate();
     
-    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const monthNames = ["Januari", "Februari", "Maret", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
     monthYearLabel.innerText = `${monthNames[month]} ${year}`;
     
-    // Slot Kosong Bulan Sebelumnya
     for (let i = 0; i < firstDayIndex; i++) {
         const emptyDiv = document.createElement('div');
         emptyDiv.classList.add('calendar-day', 'empty');
         calendarGrid.appendChild(emptyDiv);
     }
     
-    // Cetak Hari Aktif Bulanan
     for (let day = 1; day <= totalDays; day++) {
         const dayDiv = document.createElement('div');
         dayDiv.classList.add('calendar-day');
         
-        // Format tanggal YYYY-MM-DD lokal untuk dicocokkan ke database
         const currentStringDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        
-        // Hitung akumulasi pips di hari tersebut
         const dailyTrades = data.filter(t => t.date === currentStringDate);
         let dailyPipsSum = 0;
         
@@ -229,7 +228,6 @@ document.getElementById('btnNextMonth').addEventListener('click', () => {
     refreshHub();
 });
 
-// CHART BUILD ENGINE
 function buildChart() {
     const canvasContext = document.getElementById('ctxChart').getContext('2d');
     let gradient = canvasContext.createLinearGradient(0, 0, 0, 240);
@@ -277,56 +275,5 @@ function renderChartCurve(data) {
     chartInstance.data.labels = axisLabels;
     chartInstance.data.datasets[0].data = absolutePoints;
     chartInstance.update();
-}
-
-// ==========================================
-// SCAN SCREENSHOT (AUTO DETECT ENTRY & EXIT)
-// ==========================================
-const txOcrImage = document.getElementById('txOcrImage');
-const btnUploadTrigger = document.getElementById('btnUploadTrigger');
-const ocrStatus = document.getElementById('ocrStatus');
-
-btnUploadTrigger.addEventListener('click', () => txOcrImage.click());
-
-txOcrImage.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    ocrStatus.innerText = "⏳ Membaca data screenshot...";
-    ocrStatus.style.color = "var(--cyan-glow)";
-
-    Tesseract.recognize(file, 'eng').then(({ data: { text } }) => {
-        ocrStatus.innerText = "✅ Scan sukses!";
-        ocrStatus.style.color = "var(--green-tp)";
-        
-        const cleanText = text.toUpperCase();
-        console.log("OCR Result:", cleanText);
-
-        // 1. Deteksi Pair
-        if (cleanText.includes("XAUUSD") || cleanText.includes("GOLD")) document.getElementById('txPair').value = "XAUUSD";
-        else if (cleanText.includes("US100") || cleanText.includes("NASDAQ")) document.getElementById('txPair').value = "US100";
-        else if (cleanText.includes("EURUSD")) document.getElementById('txPair').value = "EURUSD";
-        else if (cleanText.includes("GBPUSD")) document.getElementById('txPair').value = "GBPUSD";
-
-        // 2. Deteksi Arah Order
-        if (/\bBUY\b/.test(cleanText)) document.getElementById('txType').value = "BUY";
-        else if (/\bSELL\b/.test(cleanText)) document.getElementById('txType').value = "SELL";
-
-        // 3. Deteksi Lot
-        const lotMatch = cleanText.match(/(?:BUY|SELL)\s*([0-9]+\.[0-9]{2})/);
-        if (lotMatch && lotMatch[1]) document.getElementById('txLot').value = lotMatch[1];
-
-        // 4. Deteksi Harga Entry & Exit otomatis dari riwayat MT4/MT5
-        // Pola mendeteksi dua deret angka berdekatan (misal: 30148.80 -> 30139.25 atau berurutan)
-        const priceMatches = cleanText.match(/\b([0-9]{4,5}\.[0-9]{2})\b/g);
-        if (priceMatches && priceMatches.length >= 2) {
-            document.getElementById('txPriceEntry').value = priceMatches[0];
-            document.getElementById('txPriceExit').value = priceMatches[1];
         }
-
-        alert("Auto Input Berhasil! Silakan periksa harga entry & exit.");
-    }).catch(err => {
-        ocrStatus.innerText = "❌ Gagal membaca gambar.";
-        ocrStatus.style.color = "var(--red-sl)";
-    });
-});
+        
